@@ -357,6 +357,7 @@ private[log] class Cleaner(val id: Int,
                                  deleteHorizonMs: Long) {
     // create a new segment with the suffix .cleaned appended to both the log and index name
     val logFile = new File(segments.head.log.file.getPath + Log.CleanedFileSuffix)
+    val cleanerPredicate = CoreUtils.createObject[CompactionPredicate](log.config.compactionPolicyClass, log.config)
     logFile.delete()
     val indexFile = new File(segments.head.index.file.getPath + Log.CleanedFileSuffix)
     indexFile.delete()
@@ -370,7 +371,7 @@ private[log] class Cleaner(val id: Int,
         val retainDeletes = old.lastModified > deleteHorizonMs
         info("Cleaning segment %s in log %s (last modified %s) into %s, %s deletes."
             .format(old.baseOffset, log.name, new Date(old.lastModified), cleaned.baseOffset, if(retainDeletes) "retaining" else "discarding"))
-        cleanInto(log.topicAndPartition, old, cleaned, map, retainDeletes)
+        cleanInto(log.topicAndPartition, old, cleaned, map, retainDeletes, cleanerPredicate)
       }
 
       // trim excess index
@@ -404,7 +405,8 @@ private[log] class Cleaner(val id: Int,
    *
    */
   private[log] def cleanInto(topicAndPartition: TopicAndPartition, source: LogSegment,
-                             dest: LogSegment, map: OffsetMap, retainDeletes: Boolean) {
+                             dest: LogSegment, map: OffsetMap, retainDeletes: Boolean,
+                             cleanerPredicate: CompactionPredicate) {
     var position = 0
     while (position < source.log.sizeInBytes) {
       checkDone(topicAndPartition)
@@ -419,7 +421,7 @@ private[log] class Cleaner(val id: Int,
         val size = MessageSet.entrySize(entry.message)
         stats.readMessage(size)
         if (entry.message.compressionCodec == NoCompressionCodec) {
-          if (shouldRetainMessage(source, map, retainDeletes, entry)) {
+          if (cleanerPredicate.shouldRetainMessage(source, map, retainDeletes, entry, stats)) {
             ByteBufferMessageSet.writeMessage(writeBuffer, entry.message, entry.offset)
             stats.recopyMessage(size)
           }
@@ -428,7 +430,7 @@ private[log] class Cleaner(val id: Int,
           val messages = ByteBufferMessageSet.deepIterator(entry.message)
           val retainedMessages = messages.filter(messageAndOffset => {
             messagesRead += 1
-            shouldRetainMessage(source, map, retainDeletes, messageAndOffset)
+            cleanerPredicate.shouldRetainMessage(source, map, retainDeletes, messageAndOffset, stats)
           }).toSeq
 
           if (retainedMessages.nonEmpty)
@@ -479,26 +481,6 @@ private[log] class Cleaner(val id: Int,
       }
       ByteBufferMessageSet.writeMessage(buffer, messageWriter, offset)
       stats.recopyMessage(messageWriter.size + MessageSet.LogOverhead)
-    }
-  }
-
-  private def shouldRetainMessage(source: kafka.log.LogSegment,
-                                  map: kafka.log.OffsetMap,
-                                  retainDeletes: Boolean,
-                                  entry: kafka.message.MessageAndOffset): Boolean = {
-    val key = entry.message.key
-    if (key != null) {
-      val foundOffset = map.get(key)
-      /* two cases in which we can get rid of a message:
-       *   1) if there exists a message with the same key but higher offset
-       *   2) if the message is a delete "tombstone" marker and enough time has passed
-       */
-      val redundant = foundOffset >= 0 && entry.offset < foundOffset
-      val obsoleteDelete = !retainDeletes && entry.message.isNull
-      !redundant && !obsoleteDelete
-    } else {
-      stats.invalidMessage()
-      false
     }
   }
 
