@@ -170,6 +170,11 @@ object AdminUtils extends Logging {
     }
   }
 
+  def truncatePartition(zkUtils: ZkUtils, topic: String, partition: Int, offset: Long) {
+    val data = Json.encode(Map("topic" -> topic, "partition" -> partition, "minOffsetToRetain" -> offset))
+    zkUtils.updatePersistentPath(TruncatePartitionPath, data)
+  }
+
   def isConsumerGroupActive(zkUtils: ZkUtils, group: String) = {
     zkUtils.getConsumersInGroup(group).nonEmpty
   }

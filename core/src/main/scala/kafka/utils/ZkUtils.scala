@@ -66,6 +66,7 @@ object ZkUtils {
   val IsrChangeNotificationPath = "/isr_change_notification"
   val EntityConfigPath = "/config"
   val EntityConfigChangesPath = "/config/changes"
+  val TruncatePartitionPath = "/admin/truncate_partition"
   
   def apply(zkUrl: String, sessionTimeout: Int, connectionTimeout: Int, isZkSecurityEnabled: Boolean): ZkUtils = {
     val (zkClient, zkConnection) = createZkClientAndConnection(zkUrl, sessionTimeout, connectionTimeout)
@@ -148,7 +149,8 @@ class ZkUtils(val zkClient: ZkClient,
                               getEntityConfigRootPath(ConfigType.Client),
                               DeleteTopicsPath,
                               BrokerSequenceIdPath,
-                              IsrChangeNotificationPath)
+                              IsrChangeNotificationPath,
+                              TruncatePartitionPath)
 
   val securePersistentZkPaths = Seq(BrokerIdsPath,
                                     BrokerTopicsPath,

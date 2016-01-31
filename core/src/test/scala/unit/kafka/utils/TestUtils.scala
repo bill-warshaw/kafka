@@ -28,6 +28,7 @@ import javax.net.ssl.X509TrustManager
 import charset.Charset
 
 import kafka.security.auth.{Resource, Authorizer, Acl}
+import org.I0Itec.zkclient.ZkClient
 import org.apache.kafka.common.protocol.SecurityProtocol
 import org.apache.kafka.common.utils.Utils._
 import org.apache.kafka.test.TestSslUtils
@@ -870,7 +871,7 @@ object TestUtils extends Logging {
   def createLogManager(logDirs: Array[File] = Array.empty[File],
                        defaultConfig: LogConfig = LogConfig(),
                        cleanerConfig: CleanerConfig = CleanerConfig(enableCleaner = false),
-                       time: MockTime = new MockTime()): LogManager = {
+                       time: MockTime = new MockTime(), zkClient: ZkClient = null): LogManager = { // todo
     new LogManager(logDirs = logDirs,
                    topicConfigs = Map(),
                    defaultConfig = defaultConfig,
@@ -881,7 +882,8 @@ object TestUtils extends Logging {
                    retentionCheckMs = 1000L,
                    scheduler = time.scheduler,
                    time = time,
-                   brokerState = new BrokerState())
+                   brokerState = new BrokerState(),
+                   zkClient = zkClient)
   }
   def sendMessages(servers: Seq[KafkaServer],
                    topic: String,

@@ -20,6 +20,7 @@ package kafka.log
 import java.io._
 import java.util.concurrent.TimeUnit
 import kafka.utils._
+import org.I0Itec.zkclient.{IZkDataListener, ZkClient}
 import scala.collection._
 import kafka.common.{TopicAndPartition, KafkaException}
 import kafka.server.{RecoveringFromUncleanShutdown, BrokerState, OffsetCheckpoint}
@@ -46,12 +47,14 @@ class LogManager(val logDirs: Array[File],
                  val retentionCheckMs: Long,
                  scheduler: Scheduler,
                  val brokerState: BrokerState,
-                 private val time: Time) extends Logging {
+                 private val time: Time,
+                 val zkClient: ZkClient) extends Logging {
   val RecoveryPointCheckpointFile = "recovery-point-offset-checkpoint"
   val LockFile = ".lock"
   val InitialTaskDelayMs = 30*1000
   private val logCreationOrDeletionLock = new Object
   private val logs = new Pool[TopicAndPartition, Log]()
+  private val minOffsetChangeListener = new MinOffsetChangeListener
 
   createAndValidateLogDirs(logDirs)
   private val dirLocks = lockLogDirs(logDirs)
@@ -205,6 +208,8 @@ class LogManager(val logDirs: Array[File],
     }
     if(cleanerConfig.enableCleaner)
       cleaner.startup()
+
+    zkClient.subscribeDataChanges(ZkUtils.TruncatePartitionPath, minOffsetChangeListener)
   }
 
   /**
@@ -213,6 +218,7 @@ class LogManager(val logDirs: Array[File],
   def shutdown() {
     info("Shutting down.")
 
+    zkClient.unsubscribeDataChanges(ZkUtils.TruncatePartitionPath, minOffsetChangeListener)
     val threadPools = mutable.ArrayBuffer.empty[ExecutorService]
     val jobs = mutable.Map.empty[File, Seq[Future[_]]]
 
@@ -491,6 +497,25 @@ class LogManager(val logDirs: Array[File],
         case e: Throwable =>
           error("Error flushing topic " + topicAndPartition.topic, e)
       }
+    }
+  }
+
+  private class MinOffsetChangeListener() extends IZkDataListener {
+
+    def handleDataChange(dataPath: String, data: Object) {
+      val offsetData = Json.parseFull(data.toString).asInstanceOf[Map[String, Object]]
+      val topic = offsetData.get("topic").asInstanceOf[String]
+      val partition = offsetData.get("partition").asInstanceOf[Int]
+      val minOffset = offsetData.get("minOffsetToRetain").asInstanceOf[Long]
+
+      val log = getLog(TopicAndPartition.apply(topic, partition)).get
+      log.deleteOldSegments((segment: LogSegment) => {
+        segment.nextOffset() <= minOffset
+      })
+    }
+
+    def handleDataDeleted(dataPath: String) {
+
     }
   }
 }
