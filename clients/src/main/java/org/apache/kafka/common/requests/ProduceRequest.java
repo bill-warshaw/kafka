@@ -85,10 +85,10 @@ public class ProduceRequest extends AbstractRequest {
         for (Object topicDataObj : struct.getArray(TOPIC_DATA_KEY_NAME)) {
             Struct topicData = (Struct) topicDataObj;
             String topic = topicData.getString(TOPIC_KEY_NAME);
-            long expectedBaseOffset = topicData.getLong(EXPECTED_BASE_OFFSET_KEY_NAME);
             for (Object partitionResponseObj : topicData.getArray(PARTITION_DATA_KEY_NAME)) {
                 Struct partitionResponse = (Struct) partitionResponseObj;
                 int partition = partitionResponse.getInt(PARTITION_KEY_NAME);
+                long expectedBaseOffset = partitionResponse.getLong(EXPECTED_BASE_OFFSET_KEY_NAME);
                 MemoryRecords records = (MemoryRecords) partitionResponse.getRecords(RECORD_SET_KEY_NAME);
                 partitionRecords.put(new TopicPartition(topic, partition), records);
                 expectedBaseOffsets.put(new TopicPartition(topic, partition), expectedBaseOffset);
@@ -115,6 +115,7 @@ public class ProduceRequest extends AbstractRequest {
                 return new ProduceResponse(responseMap);
             case 1:
             case 2:
+            case 3:
                 return new ProduceResponse(responseMap, ProduceResponse.DEFAULT_THROTTLE_TIME, versionId);
             default:
                 throw new IllegalArgumentException(String.format("Version %d is not valid. Valid versions for %s are 0 to %d",

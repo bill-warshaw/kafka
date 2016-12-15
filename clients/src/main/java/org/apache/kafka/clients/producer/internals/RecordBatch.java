@@ -71,7 +71,13 @@ public final class RecordBatch {
             return null;
         } else {
             long checksum = this.recordsBuilder.append(offsetCounter++, timestamp, key, value);
-            this.baseExpectedOffset = Math.min(expectedOffset, this.baseExpectedOffset);
+            if(expectedOffset >= 0) {
+                if(baseExpectedOffset < 0) {
+                    baseExpectedOffset = expectedOffset;
+                } else {
+                    baseExpectedOffset = Math.min(expectedOffset, baseExpectedOffset);
+                }
+            }
             this.maxRecordSize = Math.max(this.maxRecordSize, Record.recordSize(key, value));
             this.lastAppendTime = now;
             FutureRecordMetadata future = new FutureRecordMetadata(this.produceFuture, this.recordCount,

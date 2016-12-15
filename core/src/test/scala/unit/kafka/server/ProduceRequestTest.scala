@@ -44,7 +44,8 @@ class ProduceRequestTest extends BaseRequestTest {
     def sendAndCheck(recordBuffer: ByteBuffer, expectedOffset: Long): ProduceResponse.PartitionResponse = {
       val topicPartition = new TopicPartition("topic", partition)
       val partitionRecords = Map(topicPartition -> MemoryRecords.readableRecords(recordBuffer))
-      val produceResponse = sendProduceRequest(leader, new ProduceRequest(-1, 3000, partitionRecords.asJava, new HashMap[TopicPartition, java.lang.Long]))
+      val expectedOffsets = Map(topicPartition -> new java.lang.Long(-1L)).asJava
+      val produceResponse = sendProduceRequest(leader, new ProduceRequest(-1, 3000, partitionRecords.asJava, expectedOffsets))
       assertEquals(1, produceResponse.responses.size)
       val (tp, partitionResponse) = produceResponse.responses.asScala.head
       assertEquals(topicPartition, tp)
