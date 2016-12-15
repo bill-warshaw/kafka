@@ -43,7 +43,7 @@ object RequestChannel extends Logging {
 
   def getShutdownReceive() = {
     val emptyRequestHeader = new RequestHeader(ApiKeys.PRODUCE.id, "", 0)
-    val emptyProduceRequest = new ProduceRequest(0, 0, new HashMap[TopicPartition, MemoryRecords]())
+    val emptyProduceRequest = new ProduceRequest(0, 0, new HashMap[TopicPartition, MemoryRecords](), new HashMap[TopicPartition, java.lang.Long]())
     AbstractRequestResponse.serialize(emptyRequestHeader, emptyProduceRequest)
   }
 

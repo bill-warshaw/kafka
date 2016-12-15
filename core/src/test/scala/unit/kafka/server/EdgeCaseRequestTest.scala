@@ -20,6 +20,7 @@ package kafka.server
 import java.io.{DataInputStream, DataOutputStream}
 import java.net.Socket
 import java.nio.ByteBuffer
+import java.util
 
 import kafka.integration.KafkaServerTestHarness
 import kafka.network.SocketServer
@@ -117,7 +118,7 @@ class EdgeCaseRequestTest extends KafkaServerTestHarness {
       val headerBytes = requestHeaderBytes(ApiKeys.PRODUCE.id, 2, null, correlationId)
       val messageBytes = "message".getBytes
       val records = MemoryRecords.readableRecords(ByteBuffer.wrap(messageBytes))
-      val request = new ProduceRequest(1, 10000, Map(topicPartition -> records).asJava)
+      val request = new ProduceRequest(1, 10000, Map(topicPartition -> records).asJava, new util.HashMap[TopicPartition, java.lang.Long])
       val byteBuffer = ByteBuffer.allocate(headerBytes.length + request.sizeOf)
       byteBuffer.put(headerBytes)
       request.writeTo(byteBuffer)

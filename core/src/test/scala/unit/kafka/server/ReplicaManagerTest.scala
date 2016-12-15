@@ -37,6 +37,7 @@ import org.junit.{After, Before, Test}
 
 import scala.collection.JavaConverters._
 import scala.collection.Map
+import scala.collection.immutable.HashMap
 
 class ReplicaManagerTest {
 
@@ -108,6 +109,7 @@ class ReplicaManagerTest {
         requiredAcks = 3,
         internalTopicsAllowed = false,
         entriesPerPartition = Map(new TopicPartition("test1", 0) -> MemoryRecords.withRecords(Record.create("first message".getBytes()))),
+        expectedBaseOffsetsPerPartition = new HashMap[TopicPartition, Long],
         responseCallback = callback)
     } finally {
       rm.shutdown(checkpointHW = false)
@@ -161,6 +163,7 @@ class ReplicaManagerTest {
         requiredAcks = -1,
         internalTopicsAllowed = false,
         entriesPerPartition = Map(new TopicPartition(topic, 0) -> MemoryRecords.withRecords(Record.create("first message".getBytes()))),
+        expectedBaseOffsetsPerPartition = new HashMap[TopicPartition, Long],
         responseCallback = produceCallback)
 
       // Fetch some messages
@@ -223,6 +226,7 @@ class ReplicaManagerTest {
           requiredAcks = -1,
           internalTopicsAllowed = false,
           entriesPerPartition = Map(new TopicPartition(topic, 0) -> MemoryRecords.withRecords(Record.create("message %d".format(i).getBytes))),
+          expectedBaseOffsetsPerPartition = new HashMap[TopicPartition, Long],
           responseCallback = produceCallback)
       
       var fetchCallbackFired = false
