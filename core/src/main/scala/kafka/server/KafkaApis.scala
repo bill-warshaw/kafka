@@ -420,6 +420,9 @@ class KafkaApis(val requestChannel: RequestChannel,
       sendResponseCallback(Map.empty)
     else {
       val internalTopicsAllowed = request.header.clientId == AdminUtils.AdminClientId
+      val (expectedBaseOffsets) = produceRequest.getExpectedBaseOffsets.asScala.filterKeys {
+        case (topicPartition) => authorizedRequestInfo.keySet.contains(topicPartition)
+      }.asInstanceOf[Map[TopicPartition, Long]]
 
       // call the replica manager to append messages to the replicas
       replicaManager.appendRecords(
@@ -427,6 +430,7 @@ class KafkaApis(val requestChannel: RequestChannel,
         produceRequest.acks,
         internalTopicsAllowed,
         authorizedRequestInfo,
+        expectedBaseOffsets,
         sendResponseCallback)
 
       // if the request is put into the purgatory, it will have a held reference

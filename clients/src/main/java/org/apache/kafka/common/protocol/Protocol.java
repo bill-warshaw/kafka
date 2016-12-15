@@ -16,24 +16,24 @@
  */
 package org.apache.kafka.common.protocol;
 
-import org.apache.kafka.common.protocol.types.ArrayOf;
-import org.apache.kafka.common.protocol.types.Field;
-import org.apache.kafka.common.protocol.types.Schema;
-import org.apache.kafka.common.protocol.types.Type;
+import static org.apache.kafka.common.protocol.types.Type.BOOLEAN;
+import static org.apache.kafka.common.protocol.types.Type.BYTES;
+import static org.apache.kafka.common.protocol.types.Type.INT16;
+import static org.apache.kafka.common.protocol.types.Type.INT32;
+import static org.apache.kafka.common.protocol.types.Type.INT64;
+import static org.apache.kafka.common.protocol.types.Type.NULLABLE_STRING;
+import static org.apache.kafka.common.protocol.types.Type.RECORDS;
+import static org.apache.kafka.common.protocol.types.Type.STRING;
 
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
-import static org.apache.kafka.common.protocol.types.Type.BOOLEAN;
-import static org.apache.kafka.common.protocol.types.Type.BYTES;
-import static org.apache.kafka.common.protocol.types.Type.INT16;
-import static org.apache.kafka.common.protocol.types.Type.INT32;
-import static org.apache.kafka.common.protocol.types.Type.INT64;
-import static org.apache.kafka.common.protocol.types.Type.RECORDS;
-import static org.apache.kafka.common.protocol.types.Type.STRING;
-import static org.apache.kafka.common.protocol.types.Type.NULLABLE_STRING;
+import org.apache.kafka.common.protocol.types.ArrayOf;
+import org.apache.kafka.common.protocol.types.Field;
+import org.apache.kafka.common.protocol.types.Schema;
+import org.apache.kafka.common.protocol.types.Type;
 
 public class Protocol {
 
@@ -138,6 +138,10 @@ public class Protocol {
                                                                   new Field("data", new ArrayOf(new Schema(new Field("partition", INT32),
                                                                                                      new Field("record_set", RECORDS)))));
 
+    public static final Schema TOPIC_PRODUCE_DATA_V1 = new Schema(new Field("topic", STRING),
+        new Field("data", new ArrayOf(new Schema(new Field("partition", INT32), new Field("expectedBaseOffset", INT64),
+            new Field("record_set", RECORDS)))));
+
     public static final Schema PRODUCE_REQUEST_V0 = new Schema(new Field("acks",
                                                                    INT16,
                                                                    "The number of acknowledgments the producer requires the leader to have received before considering a request complete. Allowed values: 0 for no acknowledgments, 1 for only the leader and -1 for the full ISR."),
@@ -164,6 +168,12 @@ public class Protocol {
      * timestamp.
      */
     public static final Schema PRODUCE_REQUEST_V2 = PRODUCE_REQUEST_V1;
+
+    public static final Schema PRODUCE_REQUEST_V3 = new Schema(new Field("acks",
+        INT16,
+        "The number of acknowledgments the producer requires the leader to have received before considering a request complete. Allowed values: 0 for no acknowledgments, 1 for only the leader and -1 for the full ISR."),
+        new Field("timeout", INT32, "The time to await a response in ms."),
+        new Field("topic_data", new ArrayOf(TOPIC_PRODUCE_DATA_V1)));
 
     public static final Schema PRODUCE_RESPONSE_V1 = new Schema(new Field("responses",
                                                                           new ArrayOf(new Schema(new Field("topic", STRING),
@@ -204,8 +214,10 @@ public class Protocol {
                                                                           "Duration in milliseconds for which the request was throttled" +
                                                                               " due to quota violation. (Zero if the request did not violate any quota.)",
                                                                           0));
-    public static final Schema[] PRODUCE_REQUEST = new Schema[] {PRODUCE_REQUEST_V0, PRODUCE_REQUEST_V1, PRODUCE_REQUEST_V2};
-    public static final Schema[] PRODUCE_RESPONSE = new Schema[] {PRODUCE_RESPONSE_V0, PRODUCE_RESPONSE_V1, PRODUCE_RESPONSE_V2};
+    public static final Schema PRODUCE_RESPONSE_V3 = PRODUCE_RESPONSE_V2;
+
+    public static final Schema[] PRODUCE_REQUEST = new Schema[] {PRODUCE_REQUEST_V0, PRODUCE_REQUEST_V1, PRODUCE_REQUEST_V2, PRODUCE_REQUEST_V3};
+    public static final Schema[] PRODUCE_RESPONSE = new Schema[] {PRODUCE_RESPONSE_V0, PRODUCE_RESPONSE_V1, PRODUCE_RESPONSE_V2, PRODUCE_RESPONSE_V3};
 
     /* Offset commit api */
     public static final Schema OFFSET_COMMIT_REQUEST_PARTITION_V0 = new Schema(new Field("partition",

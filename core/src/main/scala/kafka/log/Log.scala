@@ -344,7 +344,7 @@ class Log(@volatile var dir: File,
    * @throws KafkaStorageException If the append fails due to an I/O error.
    * @return Information about the appended messages including the first and last offset.
    */
-  def append(records: MemoryRecords, assignOffsets: Boolean = true): LogAppendInfo = {
+  def append(records: MemoryRecords, assignOffsets: Boolean = true, expectedBaseOffset: Long = -1L): LogAppendInfo = {
     val appendInfo = analyzeAndValidateRecords(records)
 
     // if we have any valid messages, append them to the log
@@ -362,6 +362,9 @@ class Log(@volatile var dir: File,
           // assign offsets to the message set
           val offset = new LongRef(nextOffsetMetadata.messageOffset)
           appendInfo.firstOffset = offset.value
+          if(expectedBaseOffset >= 0 && appendInfo.firstOffset != expectedBaseOffset) {
+            throw new IllegalStateException("todo make this a custom exception")
+          }
           val now = time.milliseconds
           val validateAndOffsetAssignResult = try {
             LogValidator.validateMessagesAndAssignOffsets(validRecords,
