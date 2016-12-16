@@ -363,7 +363,7 @@ class Log(@volatile var dir: File,
           val offset = new LongRef(nextOffsetMetadata.messageOffset)
           appendInfo.firstOffset = offset.value
           if(expectedBaseOffset >= 0 && appendInfo.firstOffset != expectedBaseOffset) {
-            throw new IllegalStateException("todo make this a custom exception")
+            throw new ExpectedOffsetIncorrectException("Expected offset for " + topicAndPartition + " was incorrect.  Expected: " + expectedBaseOffset + "; Actual: " + appendInfo.firstOffset)
           }
           val now = time.milliseconds
           val validateAndOffsetAssignResult = try {
