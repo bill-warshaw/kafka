@@ -12,6 +12,12 @@
  */
 package org.apache.kafka.clients.producer.internals;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
 import org.apache.kafka.clients.ClientRequest;
 import org.apache.kafka.clients.ClientResponse;
 import org.apache.kafka.clients.KafkaClient;
@@ -43,12 +49,6 @@ import org.apache.kafka.common.utils.Time;
 import org.apache.kafka.common.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
 
 /**
  * The background thread that handles the sending of produce requests to the Kafka cluster. This thread makes metadata
@@ -342,14 +342,16 @@ public class Sender implements Runnable {
      */
     private void sendProduceRequest(long now, int destination, short acks, int timeout, List<RecordBatch> batches) {
         Map<TopicPartition, MemoryRecords> produceRecordsByPartition = new HashMap<>(batches.size());
+        Map<TopicPartition, Long> expectedBaseOffsetsByPartition = new HashMap<>(batches.size());
         final Map<TopicPartition, RecordBatch> recordsByPartition = new HashMap<>(batches.size());
         for (RecordBatch batch : batches) {
             TopicPartition tp = batch.topicPartition;
             produceRecordsByPartition.put(tp, batch.records());
             recordsByPartition.put(tp, batch);
+            expectedBaseOffsetsByPartition.put(tp, batch.getBaseExpectedOffset());
         }
 
-        ProduceRequest produceRequest = new ProduceRequest(acks, timeout, produceRecordsByPartition);
+        ProduceRequest produceRequest = new ProduceRequest(acks, timeout, produceRecordsByPartition, expectedBaseOffsetsByPartition);
         RequestHeader header = this.client.nextRequestHeader(ApiKeys.PRODUCE);
         RequestCompletionHandler callback = new RequestCompletionHandler() {
             public void onComplete(ClientResponse response) {

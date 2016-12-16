@@ -396,7 +396,7 @@ class KafkaApis(val requestChannel: RequestChannel,
         } else {
           val respBody = request.header.apiVersion match {
             case 0 => new ProduceResponse(mergedResponseStatus.asJava)
-            case version@(1 | 2) => new ProduceResponse(mergedResponseStatus.asJava, delayTimeMs, version)
+            case version@(1 | 2 | 3) => new ProduceResponse(mergedResponseStatus.asJava, delayTimeMs, version)
             // This case shouldn't happen unless a new version of ProducerRequest is added without
             // updating this part of the code to handle it properly.
             case version => throw new IllegalArgumentException(s"Version `$version` of ProduceRequest is not handled. Code must be updated.")
@@ -420,6 +420,9 @@ class KafkaApis(val requestChannel: RequestChannel,
       sendResponseCallback(Map.empty)
     else {
       val internalTopicsAllowed = request.header.clientId == AdminUtils.AdminClientId
+      val (expectedBaseOffsets) = produceRequest.getExpectedBaseOffsets.asScala.filterKeys {
+        case (topicPartition) => authorizedRequestInfo.keySet.contains(topicPartition)
+      }.asInstanceOf[Map[TopicPartition, Long]]
 
       // call the replica manager to append messages to the replicas
       replicaManager.appendRecords(
@@ -427,6 +430,7 @@ class KafkaApis(val requestChannel: RequestChannel,
         produceRequest.acks,
         internalTopicsAllowed,
         authorizedRequestInfo,
+        expectedBaseOffsets,
         sendResponseCallback)
 
       // if the request is put into the purgatory, it will have a held reference

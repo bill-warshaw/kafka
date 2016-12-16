@@ -610,6 +610,7 @@ class GroupMetadataManagerTest {
       EasyMock.anyShort(),
       EasyMock.anyBoolean(),
       EasyMock.anyObject().asInstanceOf[Map[TopicPartition, MemoryRecords]],
+      EasyMock.anyObject().asInstanceOf[Map[TopicPartition, Long]],
       EasyMock.capture(capturedArgument))).andAnswer(new IAnswer[Unit] {
       override def answer = capturedArgument.getValue.apply(
         Map(new TopicPartition(Topic.GroupMetadataTopicName, groupPartitionId) ->

@@ -42,6 +42,7 @@ import org.apache.kafka.common.utils.{Time, Utils}
 
 import scala.collection.JavaConverters._
 import scala.collection._
+import scala.collection.immutable.HashMap
 
 class GroupMetadataManager(val brokerId: Int,
                            val interBrokerProtocolVersion: ApiVersion,
@@ -215,6 +216,7 @@ class GroupMetadataManager(val brokerId: Int,
       config.offsetCommitRequiredAcks,
       true, // allow appending to internal offset topic
       delayedStore.partitionRecords,
+      new HashMap[TopicPartition, Long](),
       delayedStore.callback)
   }
 

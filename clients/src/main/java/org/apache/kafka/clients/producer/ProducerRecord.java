@@ -38,11 +38,14 @@ package org.apache.kafka.clients.producer;
  */
 public class ProducerRecord<K, V> {
 
+    public static final Long DEFAULT_EXPECTED_OFFSET = -1L;
+
     private final String topic;
     private final Integer partition;
     private final K key;
     private final V value;
     private final Long timestamp;
+    private final Long expectedOffset;
 
     /**
      * Creates a record with a specified timestamp to be sent to a specified topic and partition
@@ -53,7 +56,7 @@ public class ProducerRecord<K, V> {
      * @param key The key that will be included in the record
      * @param value The record contents
      */
-    public ProducerRecord(String topic, Integer partition, Long timestamp, K key, V value) {
+    public ProducerRecord(String topic, Integer partition, Long timestamp, K key, V value, Long expectedOffset) {
         if (topic == null)
             throw new IllegalArgumentException("Topic cannot be null.");
         if (timestamp != null && timestamp < 0)
@@ -67,6 +70,11 @@ public class ProducerRecord<K, V> {
         this.key = key;
         this.value = value;
         this.timestamp = timestamp;
+        this.expectedOffset = expectedOffset;
+    }
+
+    public ProducerRecord(String topic, Integer partition, Long timestamp, K key, V value) {
+        this(topic, partition, timestamp, key, value, DEFAULT_EXPECTED_OFFSET);
     }
 
     /**
@@ -137,13 +145,18 @@ public class ProducerRecord<K, V> {
         return partition;
     }
 
+    public Long expectedOffset() {
+        return expectedOffset;
+    }
+
     @Override
     public String toString() {
         String key = this.key == null ? "null" : this.key.toString();
         String value = this.value == null ? "null" : this.value.toString();
         String timestamp = this.timestamp == null ? "null" : this.timestamp.toString();
+        String expectedOffset = this.expectedOffset == null ? "null" : this.expectedOffset.toString();
         return "ProducerRecord(topic=" + topic + ", partition=" + partition + ", key=" + key + ", value=" + value +
-            ", timestamp=" + timestamp + ")";
+            ", timestamp=" + timestamp + ", expectedOffset=" + expectedOffset + ")";
     }
 
     @Override
@@ -165,7 +178,8 @@ public class ProducerRecord<K, V> {
             return false;
         else if (timestamp != null ? !timestamp.equals(that.timestamp) : that.timestamp != null)
             return false;
-
+        else if (expectedOffset != null ? !expectedOffset.equals(that.expectedOffset) : that.expectedOffset != null)
+            return false;
         return true;
     }
 
@@ -176,6 +190,7 @@ public class ProducerRecord<K, V> {
         result = 31 * result + (key != null ? key.hashCode() : 0);
         result = 31 * result + (value != null ? value.hashCode() : 0);
         result = 31 * result + (timestamp != null ? timestamp.hashCode() : 0);
+        result = 31 * result + (expectedOffset != null ? expectedOffset.hashCode() : 0);
         return result;
     }
 }

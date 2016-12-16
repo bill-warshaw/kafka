@@ -455,7 +455,8 @@ object TestUtils extends Logging {
                         saslProperties: Option[Properties] = None,
                         keySerializer: Serializer[K] = new ByteArraySerializer,
                         valueSerializer: Serializer[V] = new ByteArraySerializer,
-                        props: Option[Properties] = None): KafkaProducer[K, V] = {
+                        props: Option[Properties] = None,
+                        checkOffsets: Boolean = false): KafkaProducer[K, V] = {
 
     val producerProps = props.getOrElse(new Properties)
     producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, brokerList)
@@ -464,6 +465,7 @@ object TestUtils extends Logging {
     producerProps.put(ProducerConfig.BUFFER_MEMORY_CONFIG, bufferSize.toString)
     producerProps.put(ProducerConfig.RETRIES_CONFIG, retries.toString)
     producerProps.put(ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG, requestTimeoutMs.toString)
+    producerProps.put(ProducerConfig.CHECK_EXPECTED_OFFSETS_CONFIG, checkOffsets.toString)
 
     /* Only use these if not already set */
     val defaultProps = Map(

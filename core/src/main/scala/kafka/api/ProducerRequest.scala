@@ -26,6 +26,7 @@ import kafka.network.{RequestOrResponseSend, RequestChannel}
 import kafka.network.RequestChannel.Response
 import org.apache.kafka.common.protocol.{ApiKeys, Errors}
 
+// todo is this class actually used? everywhere it's used, it's deprecated
 object ProducerRequest {
   val CurrentVersion = 2.shortValue
 

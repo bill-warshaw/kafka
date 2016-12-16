@@ -13,6 +13,12 @@
 
 package org.apache.kafka.common.requests;
 
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.protocol.ApiKeys;
 import org.apache.kafka.common.protocol.Errors;
@@ -22,12 +28,6 @@ import org.apache.kafka.common.protocol.types.Struct;
 import org.apache.kafka.common.record.MemoryRecords;
 import org.apache.kafka.common.record.Record;
 import org.apache.kafka.common.utils.CollectionUtils;
-
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 public class ProduceRequest extends AbstractRequest {
     
@@ -43,12 +43,14 @@ public class ProduceRequest extends AbstractRequest {
     // partition level field names
     private static final String PARTITION_KEY_NAME = "partition";
     private static final String RECORD_SET_KEY_NAME = "record_set";
+    private static final String EXPECTED_BASE_OFFSET_KEY_NAME = "expectedBaseOffset";
 
     private final short acks;
     private final int timeout;
     private final Map<TopicPartition, MemoryRecords> partitionRecords;
+    private final Map<TopicPartition, Long> expectedBaseOffsets;
 
-    public ProduceRequest(short acks, int timeout, Map<TopicPartition, MemoryRecords> partitionRecords) {
+    public ProduceRequest(short acks, int timeout, Map<TopicPartition, MemoryRecords> partitionRecords, Map<TopicPartition, Long> expectedBaseOffsets) {
         super(new Struct(CURRENT_SCHEMA));
         Map<String, Map<Integer, MemoryRecords>> recordsByTopic = CollectionUtils.groupDataByTopic(partitionRecords);
         struct.set(ACKS_KEY_NAME, acks);
@@ -62,6 +64,7 @@ public class ProduceRequest extends AbstractRequest {
                 MemoryRecords records = partitionEntry.getValue();
                 Struct part = topicData.instance(PARTITION_DATA_KEY_NAME)
                                        .set(PARTITION_KEY_NAME, partitionEntry.getKey())
+                                       .set(EXPECTED_BASE_OFFSET_KEY_NAME, expectedBaseOffsets.get(new TopicPartition(entry.getKey(), partitionEntry.getKey())))
                                        .set(RECORD_SET_KEY_NAME, records);
                 partitionArray.add(part);
             }
@@ -72,19 +75,23 @@ public class ProduceRequest extends AbstractRequest {
         this.acks = acks;
         this.timeout = timeout;
         this.partitionRecords = partitionRecords;
+        this.expectedBaseOffsets = expectedBaseOffsets;
     }
 
     public ProduceRequest(Struct struct) {
         super(struct);
         partitionRecords = new HashMap<>();
+        expectedBaseOffsets = new HashMap<>();
         for (Object topicDataObj : struct.getArray(TOPIC_DATA_KEY_NAME)) {
             Struct topicData = (Struct) topicDataObj;
             String topic = topicData.getString(TOPIC_KEY_NAME);
             for (Object partitionResponseObj : topicData.getArray(PARTITION_DATA_KEY_NAME)) {
                 Struct partitionResponse = (Struct) partitionResponseObj;
                 int partition = partitionResponse.getInt(PARTITION_KEY_NAME);
+                long expectedBaseOffset = partitionResponse.getLong(EXPECTED_BASE_OFFSET_KEY_NAME);
                 MemoryRecords records = (MemoryRecords) partitionResponse.getRecords(RECORD_SET_KEY_NAME);
                 partitionRecords.put(new TopicPartition(topic, partition), records);
+                expectedBaseOffsets.put(new TopicPartition(topic, partition), expectedBaseOffset);
             }
         }
         acks = struct.getShort(ACKS_KEY_NAME);
@@ -108,6 +115,7 @@ public class ProduceRequest extends AbstractRequest {
                 return new ProduceResponse(responseMap);
             case 1:
             case 2:
+            case 3:
                 return new ProduceResponse(responseMap, ProduceResponse.DEFAULT_THROTTLE_TIME, versionId);
             default:
                 throw new IllegalArgumentException(String.format("Version %d is not valid. Valid versions for %s are 0 to %d",
@@ -125,6 +133,10 @@ public class ProduceRequest extends AbstractRequest {
 
     public Map<TopicPartition, MemoryRecords> partitionRecords() {
         return partitionRecords;
+    }
+
+    public Map<TopicPartition, Long> getExpectedBaseOffsets() {
+        return expectedBaseOffsets;
     }
 
     public void clearPartitionRecords() {

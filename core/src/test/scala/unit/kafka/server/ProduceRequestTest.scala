@@ -18,6 +18,7 @@
 package kafka.server
 
 import java.nio.ByteBuffer
+import java.util.HashMap
 
 import kafka.utils.TestUtils
 import org.apache.kafka.test.{TestUtils => JTestUtils}
@@ -43,7 +44,8 @@ class ProduceRequestTest extends BaseRequestTest {
     def sendAndCheck(recordBuffer: ByteBuffer, expectedOffset: Long): ProduceResponse.PartitionResponse = {
       val topicPartition = new TopicPartition("topic", partition)
       val partitionRecords = Map(topicPartition -> MemoryRecords.readableRecords(recordBuffer))
-      val produceResponse = sendProduceRequest(leader, new ProduceRequest(-1, 3000, partitionRecords.asJava))
+      val expectedOffsets = Map(topicPartition -> new java.lang.Long(-1L)).asJava
+      val produceResponse = sendProduceRequest(leader, new ProduceRequest(-1, 3000, partitionRecords.asJava, expectedOffsets))
       assertEquals(1, produceResponse.responses.size)
       val (tp, partitionResponse) = produceResponse.responses.asScala.head
       assertEquals(topicPartition, tp)
@@ -79,7 +81,7 @@ class ProduceRequestTest extends BaseRequestTest {
     recordBuffer.array.update(40, 0)
     val topicPartition = new TopicPartition("topic", partition)
     val partitionRecords = Map(topicPartition -> MemoryRecords.readableRecords(recordBuffer))
-    val produceResponse = sendProduceRequest(leader, new ProduceRequest(-1, 3000, partitionRecords.asJava))
+    val produceResponse = sendProduceRequest(leader, new ProduceRequest(-1, 3000, partitionRecords.asJava, new HashMap[TopicPartition, java.lang.Long]))
     assertEquals(1, produceResponse.responses.size)
     val (tp, partitionResponse) = produceResponse.responses.asScala.head
     assertEquals(topicPartition, tp)
